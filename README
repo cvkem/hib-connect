@@ -1,0 +1,34 @@
+# hib-connect
+
+Hib-connect provides an interface between the clojure-world and a hibernate database. Hibernate is an ORM (Object Relational Model) that basically provides two functionalities:
+1. A uniform interface to many different database systems (abstracting away the difference in SQL-dialects.
+2. Persistant storage of (java-)objects and the relations between these objects.
+
+The first item is my primary motivation to develop this system. The system consist of two parts:
+1. A code generator that based on a name and a field definition generates:
+    a. A .java file containing a class definition of the stored objects.
+    b. A .map.include file that describes the hiberanate mapping.
+    c. A .clj file describes the clojure interface for the objects.
+2. An connector (bridge) to the hibernate work containing the sessionFactory and the code to translate objects/instances from/to clojure.
+ 
+
+
+## Usage
+Using the system basically is a n-step procedure
+1. Use the vinzi.hib-connect.code-generator to generate the files describing your datastructure
+2. Include the generated files in your code-base
+     a. The .java files need to  be compiled to the classes folder
+     b. The .map.include needs to be included in your hibernate mapping
+     c. The .clj needs to be include in the 'use' or 'require' of your code.
+3. The vinzi.hib-connect.bridge needs to be include in your code.
+
+Calls to the hiberate system require a session. The session is provided by wrapping calls with 'call-in-hib-session'.
+When closing the program you need to call 'close-hib' to release the database-connection.
+
+In the file vinzi.hib-connector.demo.clj you find some examples of using the system.
+
+## License
+
+Copyright (C) 2012 Vinzi
+
+Distributed under the Eclipse Public License, the same as Clojure.

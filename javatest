@@ -1,0 +1,10 @@
+echo " did you do a manual start of the hsql-db  (via tools/hsdb.sh)" 
+
+echo "compiling the java sources"
+tools/jc src/java/*.java 
+
+
+echo "running the hibManager"
+tools/ja vinzi.cdfdeMgt.util.HibManager store
+
+

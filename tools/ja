@@ -1,0 +1,6 @@
+JAVA=java
+CLASSPATH=/home/cees/Clj/hib-connect/test:/home/cees/Clj/hib-connect/test-resources:/home/cees/Clj/hib-connect/src:/home/cees/Clj/hib-connect/classes:/home/cees/Clj/hib-connect/resources:/home/cees/Clj/hib-connect/lib/hibernate-core-3.5.4-Final.jar:/home/cees/Clj/hib-connect/lib/slf4j-api-1.5.8.jar:/home/cees/Clj/hib-connect/lib/antlr-2.7.6.jar:/home/cees/Clj/hib-connect/lib/clojure-contrib-1.2.0.jar:/home/cees/Clj/hib-connect/lib/commons-collections-3.1.jar:/home/cees/Clj/hib-connect/lib/slf4j-simple-1.5.8.jar:/home/cees/Clj/hib-connect/lib/clojure-1.2.1.jar:/home/cees/Clj/hib-connect/lib/xml-apis-1.0.b2.jar:/home/cees/Clj/hib-connect/lib/javassist-3.12.1.GA.jar:/home/cees/Clj/hib-connect/lib/dom4j-1.6.1.jar:/home/cees/Clj/hib-connect/lib/hsqldb-2.2.4.jar:/home/cees/Clj/hib-connect/lib/jta-1.1.jar:/home/cees/Clj/hib-connect/lib/dev/marginalia-0.6.1.jar:/home/cees/Clj/hib-connect/lib/dev/clojure-contrib-1.2.0.jar:/home/cees/Clj/hib-connect/lib/dev/lein-marginalia-0.6.1.jar:/home/cees/Clj/hib-connect/lib/dev/clojure-1.2.1.jar:/home/cees/Clj/hib-connect/lib/dev/hiccup-0.3.0.jar:/home/cees/Clj/hib-connect/lib/dev/markdownj-0.3.0-1.0.2b4.jar
+
+${JAVA} -cp $CLASSPATH $*
+
+
