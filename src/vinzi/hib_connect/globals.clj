@@ -5,10 +5,11 @@
 
 (defn get-type-id
   "The 'get-type-id' is used to retrieve the class/type of a function.
-   It takes the 'keyword' of type because otherwise multiple definitions
+   It takes the 'str' of type because otherwise multiple definitions
    result in different keys (however, the string-representation is the same)."
   [obj]
-  (keyword (type obj)))
+  ;; Warning: don't use keywords, as the keyword of type always equals nil
+  (str (type obj)))
 
 (defn add-to-clj
   "The type of 'obj' is determined and it is stored in the atom 'to-clj'."
@@ -38,7 +39,7 @@
   (let [cls (get-type-id obj)
 	func (get @to-java cls)]
     (when (nil? func)
-      (println "The translator to clojure for class " cls " could not be found!")
+      (println "The translator to clojure for '" cls "' could not be found!")
       (println "  the object is: " obj)
       (assert func))
     func))

@@ -3,16 +3,21 @@
 "-//Hibernate/Hibernate Mapping DTD 3.0//EN"
 "http://www.hibernate.org/dtd/hibernate-mapping-3.0.dtd">
 
-<hibernate-mapping package="vinzi.cdfdeMgt.domain">
+<hibernate-mapping package="vinzi.test">
+	<class name="int_rec_jv" table="int_rec">
+		<id name="id" column="id">
+			<generator class="native"/>
+		</id>
+		<property name="a"/>
+		<property name="b"/>
+	</class>
 
-  <class name="TrackInfo" table="track_info">
-    <id name="id" column="TRACK_ID">
-      <generator class="native"/>
-    </id>
-    <property name="track_name"/>
-    <property name="file_location"/>
-  </class>
-
-
+	<class name="str_rec_jv" table="str_rec">
+		<id name="id" column="id">
+			<generator class="native"/>
+		</id>
+		<property name="s"/>
+		<property name="t"/>
+	</class>
 </hibernate-mapping>
 

@@ -27,6 +27,13 @@ When closing the program you need to call 'close-hib' to release the database-co
 
 In the file vinzi.hib-connector.demo.clj you find some examples of using the system.
 
+## dependencies
+There is no maven-repository for mysql, so you have to download the jar and install it in your local maven-repository via the command (example):
+   mvn install:install-file -DgroupId=mysql-connector-java -DartifactId=mysql-connector-java -Dversion=5.1.17 -Dpackaging=jar -Dfile=/opt/jdbc/mysql-connector-java-5.1.17-bin.jar
+This artifact can be used in project.clj as:
+  :dependencies [ [mysql-connector-java "5.1.17"]]
+
+
 ## License
 
 Copyright (C) 2012 Vinzi

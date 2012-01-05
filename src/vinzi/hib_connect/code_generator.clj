@@ -24,7 +24,7 @@ public class %s {")
 (def fieldFmt "
     public %s %s;
     public %s get%s() { return %s;}
-    public void set%s(%s %s)  {this.%s = %s; };\n\n")
+    %s void set%s(%s %s)  {this.%s = %s; };\n\n")
 (def constructFmt "
     public %s() {};\n
     public %s(%s) {\n%s\treturn;};\n\n")
@@ -41,11 +41,12 @@ public class %s {")
 
 (defn java-field-def
   "Produce a string with a type-definition, a getter and a setter."
-  [[fName fType]]
-  (let [gsName (getSet-postfix fName)]
+  [[fName fType fSetAccess]]
+  (let [gsName (getSet-postfix fName)
+	fSetAccess  (if fSetAccess fSetAccess "public")]
     (format fieldFmt fType fName
 	    fType gsName fName
-	    gsName fType fName fName fName)))
+	    fSetAccess gsName fType fName fName fName)))
 
 (defn java-constructor-def
   "Define a default constructor and a constructor that takes all parameters."
@@ -83,14 +84,17 @@ public class %s {")
 
 
 (def cljHeadFmt  "(ns %s.%s
-    (use vinzi.hib-connect.globals)
-    (import %s.%s))\n\n")
+    (:use vinzi.hib-connect.globals)
+    (:import %s.%s))\n\n")
 (def defrecordFmt "(defrecord %s [%s])\n\n")
 (def cljToJavaFmt "(defn %s-to-java [cRec]\n\t(%s. %s))\n\n
 (add-to-java (%s. %s) %s-to-java)\n\n")
-;(def cljCreateFmt "(def _type {:to-java %s-to-java})\n
-;(defn create-%s [%s]
-;  (%s. _type %s))\n\n")
+(def cljCreateFmt "(defn create-%s [%s]
+  ;; TO DO:  insert type-checking (java-objects are strictly typed)
+  (%s. nil %s))\n\n")
+(def cljCloneFmt "(defn clone-%s [cRec]
+  ;; TO DO:  insert type-checking cRec should be same type/class as target
+  (create-%s %s))\n\n")
 (def javaToCljFmt "(defn %s-to-clj [jRec]\n\t(%s. %s))\n\n
 (add-to-clj (%s.) %s-to-clj)\n\n")
 
@@ -112,12 +116,24 @@ public class %s {")
     (format cljToJavaFmt name javaName fields
 	    name args name)))
 
+(defn skip-id
+  "Skip the first item of the sequence if it is an 'id' item"
+  [fields matchFunc]
+  (if (= (matchFunc fields) "id") (rest fields) fields))
 
-;(defn clj-create [name fNames]
-;  (let [fNames (apply str (interpose " " fNames))]
-;    (format cljCreateFmt name
-;	    name fNames
-;	    name fNames)))
+(defn clj-create [name fNames]
+  (let [fNames (skip-id fNames first)
+;;	fNames (if (= (first fNames) "id") (rest fNames) fNames)
+	fNames (apply str (interpose " " fNames))]
+    (format cljCreateFmt name fNames
+	    name fNames)))
+
+(defn clj-clone [name fNames]
+  (let [fNames (skip-id fNames first)
+	fNames (map #(format "(:%s cRec)" %) fNames)
+	fNames (apply str (interpose " " fNames))]
+    (format cljCloneFmt name
+	    name fNames)))
 
 (defn java-to-clj
   "Define a translator that maps a clojure defrecord to a java class."
@@ -135,38 +151,52 @@ public class %s {")
 	fNames (map first fields)
 	defrecStr (clj-defrecord name fNames)
 	defToJavaStr (clj-to-java name fNames javaName)
-;	createStr  (clj-create name fNames)
+	createStr  (clj-create name fNames)
+	cloneStr  (clj-clone name fNames)
 	defToCljStr  (java-to-clj name fNames javaName)
 	fileName (concat (list "src")
 			 (str/split package #"\.")
 			 (list (str name ".clj")))
 	fileName (apply str (interpose File/separator fileName))
 	]
-    (write-src-file fileName (str head defrecStr
-		 defToJavaStr defToCljStr))))
+    (write-src-file fileName (str head
+				  defrecStr createStr cloneStr
+				  defToJavaStr defToCljStr))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Functions to generate mapping that is used by hiberate.
 ;;
 
+;; these mapping are use to over-rule the default-mapping
+;; of hibernate
+;;    - String --> text  such that longvarchar is used
+;;    - Date --> timestamp   for maximal precision.
+(def hibTypeMapping {"String"  "text"
+		     "java.util.Date" "timestamp"
+		     "Date"   "timestamp"})
+		     
+
 (def hibHeadFmt "<hibernate-mapping package=\"%s\">
 \t<class name=\"%s\" table=\"%s\">
 \t\t<id name=\"id\" column=\"id\">
 \t\t\t<generator class=\"native\"/>
 \t\t</id>\n")
-(def hibFootFmt "\t</class>\n</hibernate-mapping>")
+(def hibFootFmt "\t</class>\n</hibernate-mapping>\n\n")
 
 (defn gen-hib [package name fields javaName]
-  (let [head (format hibHeadFmt package javaName (str/lower-case name))
-	;; skip the 'id' fields (is already pre-defined)
-	fields (if (= (ffirst fields) "id") (rest fields) fields)
-	fldStr (map #(format "\t\t<property name=\"%s\"/>\n" %)
-		    (map first fields))
-	fldStr (apply str fldStr)
-	fileName `("resources"  ~(str name ".xml.include"))
-	fileName (apply str (interpose File/separator fileName))]
-    (write-src-file fileName (str head fldStr hibFootFmt))))
+  (letfn [(hib-descr[[nm type]]
+		    (let [tpStr (if-let [htype (hibTypeMapping type)]
+				  (str " type=\"" htype "\"") "")]
+		      (format "\t\t<property name=\"%s\"%s/>\n" nm tpStr)))]
+    (let [head (format hibHeadFmt package javaName (str/lower-case name))
+	  ;; skip the 'id' fields (is already pre-defined)
+	  fields (skip-id fields ffirst)
+	  fldStr (map hib-descr fields)
+	  fldStr (apply str fldStr)
+	  fileName `("resources"  ~(str name ".xml.include"))
+	  fileName (apply str (interpose File/separator fileName))]
+      (write-src-file fileName (str head fldStr hibFootFmt)))))
 
 
 
@@ -177,15 +207,22 @@ public class %s {")
     2. A clojure file with the corresponding defrecord and helper functions.
     3. A hibernate mapping (inclusion) file."
   [qualifiedName fields]
-  (let [nameParts (str/split qualifiedName #"\.")
-	name  (last nameParts)
-	package (take (dec (count nameParts)) nameParts)
-	package (apply str (interpose "." package))
-	javaName (str name javaSuffix)
-	;; prepend an id-fields
-	fields  (concat (list ["id" "long"]) fields)]
-    (gen-java package javaName fields)
-    (gen-clj package name fields javaName)
-    (gen-hib package name fields javaName)
-    ))
+  ;; translate all keywords to strings first.
+  (println "received fields: " fields)
+  (let [qualifiedName (name qualifiedName)
+	fields (map #(map name  %) fields)]
+;;	fields (map #(vector (name (first %)) (name (second %))) fields)]
+    (println)
+    (println "switched fields: " fields)
+    (let [nameParts (str/split qualifiedName #"\.")
+	  name  (last nameParts)
+	  package (take (dec (count nameParts)) nameParts)
+	  package (apply str (interpose "." package))
+	  javaName (str name javaSuffix)
+	  ;; prepend an id-fields
+	  fields  (concat (list ["id" "Long" "protected"]) fields)]
+      (gen-java package javaName fields)
+      (gen-clj package name fields javaName)
+      (gen-hib package name fields javaName)
+    )))
 
