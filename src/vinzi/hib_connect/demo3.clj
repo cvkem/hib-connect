@@ -13,41 +13,41 @@
 	i2 (create-int_rec  500 1000)]
 
     (println "store a str_rec: " s1)
-    (call-in-hib-session store-hib  s1)
+    (store-hib  s1)
     (println "store a int_rec" i1)
-    (let [res (call-in-hib-session store-hib  i1)]
+    (let [res (store-hib  i1)]
       (println " i1 = " i1)
       (println "  after storing received result = " res)
 ;; currently not possible due to type-conversion
-;;      (call-in-hib-session store-hib  (assoc res :a -1000))
+;;      (exec-hib-transaction store-hib  (assoc res :a -1000))
 ;;      (println "stored i1 again with value -1000")
       )
 
-    (let [res (call-in-hib-session store-hib  i1)]
+    (let [res (store-hib  i1)]
       (println "stored i2 = " i2)
       (println "  after storing received result = " res)
-      (call-in-hib-session store-hib  res)
+      (store-hib  res)
       (println "stored res of i2 again (overwrites previous value)"))
     
     (println "store a (mixed sequence" i1  s2  s1)
-    (call-in-hib-session store-hib  [i1 s2 s1])
+    (store-hib  [i1 s2 s1])
 
-    (print "generate a sequence of objects")
+    (print "generate a sequence of objects within a single transaction")
     (letfn [(gen-func-map [session range func]
 			  (doseq [i range]
 			    (let [ir (create-int_rec i (func i))]
-			      (store-hib session ir))))]
-      (call-in-hib-session gen-func-map (range 30) #(* % %)))
+			      (store-hib* session ir))))]
+      (exec-hib-transaction gen-func-map (range 30) #(* % %)))
 
     (println "Delete item a=3 with a HQL query")
-    (call-in-hib-session delete-hib "FROM int_rec_jv WHERE a = 3")
+    (delete-hib "FROM int_rec_jv WHERE a = 3")
 
     (println " Select item a=5 and subsequently delete it")
     (with-query-results res ["FROM int_rec_jv WHERE a = 5"]
-      (call-in-hib-session delete-hib res))
-      ;;  (println " closing down the hibernate session (was opened automatically")
-  (close-hib)
-  ))
+      (delete-hib res))
+
+    (println " closing down the hibernate session (was opened automatically")
+    (close-hib)))
 
 (defn demo4 []
   (force-open-hib)

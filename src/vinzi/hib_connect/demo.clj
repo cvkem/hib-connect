@@ -24,13 +24,13 @@
 	   "\t  javac -d classes src/java/TrackInfo.java\n"
 	   "After compiling restart the reply to load this file\n")
   (println "Adding a first record (of this session)")
-  (call-in-hib-session create-track-record "Hi"  "this is the first record" )
+  (exec-hib-transaction create-track-record "Hi"  "this is the first record" )
 
   (println " Adding a few more records")
-  (call-in-hib-session (fn [s] (doall (map #(create-track-record s "count-up" (str "count="%)) (range 3)))))
+  (exec-hib-transaction (fn [s] (doall (map #(create-track-record s "count-up" (str "count="%)) (range 3)))))
 
   (println "Reading all contents")
-  (call-in-hib-session read-all)
+  (exec-hib-transaction read-all)
  
   (println " closing down the hibernate session (was opened automatically")
   (close-hib)

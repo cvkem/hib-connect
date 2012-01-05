@@ -3,6 +3,10 @@
   (import org.hibernate.SessionFactory)
   (import org.hibernate.cfg.Configuration))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Functions for debugging
+;;
 
 (defmacro br_prl [& args]
 ;;  (apply println args)
@@ -10,6 +14,11 @@
 (defmacro br_pr [& args]
 ;;  (apply println args)
   )
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Functions for managing the connections
+;;
 
 (defn createSessionFactory "Create a sessionFactory" []
   (try
@@ -25,12 +34,23 @@
 (defn close-hib "close the session-factory (shutdown)" []
   (.close sessionFactory))
 
-(defn force-open-hib []
+(defn force-open-hib
+  "Check the status of the current session. If it is closed reopen it."
+  []
   (when (.isClosed sessionFactory)
     (def sessionFactory (createSessionFactory))))
 
+
+(defn exec-hib-transaction [f & args]
+  "Calls function 'f' within a hiberate session. A transaction is opened, next the function 'f' is called with arguments 'session' as first argument, followed by 'args' and afterwords the transaction is commited."
+  (let [session (.getCurrentSession sessionFactory)]
+    (.beginTransaction session)
+    (let [res (apply f session args)]
+      (.. session (getTransaction) (commit))
+    res)))
+
 ;; For the time being I only deliver a function interface
-;; use 'call-in-hib-session
+;; use 'exec-hib-transaction
 ;;
 ;; (defmacro with-hib-session
 ;;   "Macro that runs the body within a hiberate session. A transaction is opened, next the body is executed and afterwards the transaction is commited."
@@ -41,14 +61,11 @@
 ;;        ~@body
 ;;        (.. session (getTransaction) (commit)))))
 
-(defn call-in-hib-session [f & args]
-  "Calls function 'f' within a hiberate session. A transaction is opened, next the function 'f' is called with arguments 'session' as first argument, followed by 'args' and afterwords the transaction is commited."
-  (let [session (.getCurrentSession sessionFactory)]
-    (.beginTransaction session)
-    (let [res (apply f session args)]
-      (.. session (getTransaction) (commit))
-    res)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Functions for translation between the clojure and java domain.
+;;
 
 
 (defn- transferGenerator
@@ -69,11 +86,18 @@
 (def trans-to-java (transferGenerator get-to-java))
 
 
-(defn store-hib
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;  Functions for datamanagement
+;;
+
+
+
+(defn store-hib*
   "Function 'store-hib' takes a single clj-record, or a sequence of clj-records
-   and store the records one by one (so a sequence might contain a mixture of
-   different types.
-   This function should be provided a session (via 'call-in-hib-session')"
+   and store the records one by one (so a sequence might be heterogeneous
+   (contain a mixture of different types).
+   Internal functions to be called with a 'exec-hib-transaction'."
   [session cRecs]
   (letfn [(store-single [cRec]
 			;; translate the record to a java-object and store it
@@ -90,12 +114,19 @@
       (doall (map store-single cRecs))
       (store-single cRecs))))
 
+(defn store-hib
+  "Function 'store-hib' takes a single clj-record, or a sequence of clj-records
+   and store the records one by one (so a sequence might be heterogeneous
+   (contain a mixture of different types)."
+  [cRecs]
+  (exec-hib-transaction store-hib* cRecs))
 
-(defn query-hib
+
+(defn query-hib*
   "Function 'query-hib' runs the query and returns a sequence of clj-objectstakes a single clj-record, or a sequence of clj-records
    and store the records one by one (so a sequence might contain a mixture of
    different types.
-   This function should be provided a session (via 'call-in-hib-session')"
+   This function should be provided a session (via 'exec-hib-transaction')"
 [session qryStr]
   (let [qry   (.createQuery session qryStr)
 	jRes   (.list qry)
@@ -104,6 +135,13 @@
     (br_prl "returns:")
     (br_prl cRes)
     cRes))
+
+(defn query-hib
+  "Function 'query-hib' runs the query and returns a sequence of clj-objectstakes a single clj-record, or a sequence of clj-records
+   and store the records one by one (so a sequence might contain a mixture of
+   different types."
+  [qryStr]
+  (exec-hib-transaction query-hib* qryStr))
 
 (defmacro with-query-results
   "Executes a query, then evaluates body with results bound to a seq of the
@@ -129,11 +167,11 @@ parameterized) sql query string followed by values for any parameters.
 (br_prl "about to run query: " (first sql-params))
 (br_prl "Next applying local function " func "  containing body")
 ;;
-(let [rset (call-in-hib-session query-hib (first sql-params))]
+(let [rset (query-hib (first sql-params))]
   (func rset)))
 
 
-(defn delete-hib
+(defn delete-hib*
   "This function either takes as argument either an object stored in hibernate
    a (heterogenous) sequence of vector of objects or string that representes
    a hibernate selection. It deletes the object from the hibernate store.
@@ -155,5 +193,13 @@ parameterized) sql query string followed by values for any parameters.
 		  (delete-single toDel)))]
       (br_prl "Deleted  " res " items")
       res)))
+
+(defn delete-hib
+  "This function either takes as argument either an object stored in hibernate
+   a (heterogenous) sequence of vector of objects or string that representes
+   a hibernate selection. It deletes the object from the hibernate store.
+   This function returns the number of deleted items."
+  [toDel]
+  (exec-hib-transaction delete-hib* toDel))
 
 
