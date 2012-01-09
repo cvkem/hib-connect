@@ -3,17 +3,6 @@
   (import org.hibernate.SessionFactory)
   (import org.hibernate.cfg.Configuration))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;  Functions for debugging
-;;
-
-(defmacro br_prl [& args]
-;;  (apply println args)
-  )
-(defmacro br_pr [& args]
-;;  (apply println args)
-  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -68,17 +57,6 @@
 ;;
 
 
-(defn- transferGenerator
-  "The generaric translator (closure). Currently there are two instances,
-    ie.  trans-to-Clj and trans-to-java."
-  [transGen]
-  (fn [rec] (let [translator (transGen rec)]
-    (when (nil? translator)
-      (br_prl "No translator found for ttem " rec)
-      (flush)
-      (assert translator))
-    (translator rec))))
-
 ;; translates a java-object to a clj-instance.
 (def trans-to-clj (transferGenerator get-to-clj))
 
@@ -102,12 +80,12 @@
   (letfn [(store-single [cRec]
 			;; translate the record to a java-object and store it
 			(let [jRec (trans-to-java cRec)]
-			  (br_prl  "saving the record with contents: " jRec)
+			  (hib_prl  "saving the record with contents: " jRec)
 			  (let [res (.save session jRec)
 				newId (.getId jRec)]
 			    (if (not= newId (:id cRec))
 			      (do
-				(br_prl " id changed to: " newId)
+				(hib_prl " id changed to: " newId)
 				(assoc cRec :id newId))
 			      cRec))))]
     (if (or (seq? cRecs) (vector? cRecs))
@@ -129,11 +107,11 @@
    This function should be provided a session (via 'exec-hib-transaction')"
 [session qryStr]
   (let [qry   (.createQuery session qryStr)
-	jRes   (.list qry)
+	jRes   (seq (.list qry))
 	cRes   (map trans-to-clj jRes)]
-    (br_prl "The query: " qryStr)
-    (br_prl "returns:")
-    (br_prl cRes)
+    (hib_prl "The query: " qryStr)
+    (hib_prl "returns:")
+    (hib_prl cRes)
     cRes))
 
 (defn query-hib
@@ -164,8 +142,8 @@ parameterized) sql query string followed by values for any parameters.
   (println "The current implementation will only handle the first sql-param")
   (println "Discarding: " (rest sql-params)))
 ;;
-(br_prl "about to run query: " (first sql-params))
-(br_prl "Next applying local function " func "  containing body")
+(hib_prl "about to run query: " (first sql-params))
+(hib_prl "Next applying local function " func "  containing body")
 ;;
 (let [rset (query-hib (first sql-params))]
   (func rset)))
@@ -181,17 +159,17 @@ parameterized) sql query string followed by values for any parameters.
   (letfn [(delete-single [cRec]
 			;; translate the record to a java-object and store it
 			(let [jRec (trans-to-java cRec)]
-			  (br_prl  "Deleting the record with contents: " jRec)
+			  (hib_prl  "Deleting the record with contents: " jRec)
 			  (.delete session jRec)
 			  1))]
     (let [res (if (= (type toDel) (type ""))
 		(let [res (.delete session toDel)]
-		  (br_prl "Deleting records for select-string: " toDel)
+		  (hib_prl "Deleting records for select-string: " toDel)
 		  res)
 		(if (or (seq? toDel) (vector? toDel))
 		  (count (doall (map delete-single toDel)))
 		  (delete-single toDel)))]
-      (br_prl "Deleted  " res " items")
+      (hib_prl "Deleted  " res " items")
       res)))
 
 (defn delete-hib

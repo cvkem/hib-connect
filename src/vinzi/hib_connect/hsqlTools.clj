@@ -7,13 +7,17 @@
 (def db {
 	 :classname "org.hsqldb.jdbc.JDBCDriver"
 	 :subprotocol "hsqldb"
-	 :subname  "hsql://localhost/testdb"
+	 :subname  "hsql://localhost:9001/testdb"
 	 :user  "SA"
 	 :password ""})
 
 
 
-(defn doSql [& cmds]
+(defn doSql
+  "Execute an Sql statement for it's side effects on the database.
+   If you want to view the output then use 'showSql'."
+  [& cmds]
+  (println "Use ShowSql if you want to view the output")
   (sql/with-connection db (apply sql/do-commands cmds)))
 
 (defn showSql [& cmds]
@@ -29,4 +33,4 @@
 (defmacro doComm [cmd]
   `(sql/with-connection db ~cmd)) 
 
-(showSql "select * from int_rec")
+;;(showSql "select * from int_rec")

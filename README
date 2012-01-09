@@ -33,6 +33,9 @@ There is no maven-repository for mysql, so you have to download the jar and inst
 This artifact can be used in project.clj as:
   :dependencies [ [mysql-connector-java "5.1.17"]]
 
+## todo's
+- Add type-meta data to returned clj-objects (such that assoc is allowed again)
+-
 
 ## License
 

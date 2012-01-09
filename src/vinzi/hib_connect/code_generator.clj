@@ -2,6 +2,10 @@
   (require [clojure.string :as str])
   (import  [java.io File]))
 
+(def tablePrefix (atom ""))
+
+(defn set-table-prefix [prefix]
+  (swap! tablePrefix (fn [_] prefix)))
 
 (defn write-src-file
   "Write a file with the provided contents."
@@ -184,17 +188,18 @@ public class %s {")
 \t\t</id>\n")
 (def hibFootFmt "\t</class>\n</hibernate-mapping>\n\n")
 
-(defn gen-hib [package name fields javaName]
+(defn gen-hib [package tbl_name fields javaName]
   (letfn [(hib-descr[[nm type]]
 		    (let [tpStr (if-let [htype (hibTypeMapping type)]
 				  (str " type=\"" htype "\"") "")]
 		      (format "\t\t<property name=\"%s\"%s/>\n" nm tpStr)))]
-    (let [head (format hibHeadFmt package javaName (str/lower-case name))
+    (let [head (format hibHeadFmt package javaName
+		       (str/lower-case tbl_name))
 	  ;; skip the 'id' fields (is already pre-defined)
 	  fields (skip-id fields ffirst)
 	  fldStr (map hib-descr fields)
 	  fldStr (apply str fldStr)
-	  fileName `("resources"  ~(str name ".xml.include"))
+	  fileName `("resources"  ~(str tbl_name ".xml.include"))
 	  fileName (apply str (interpose File/separator fileName))]
       (write-src-file fileName (str head fldStr hibFootFmt)))))
 
@@ -219,10 +224,11 @@ public class %s {")
 	  package (take (dec (count nameParts)) nameParts)
 	  package (apply str (interpose "." package))
 	  javaName (str name javaSuffix)
+	  tblName  (str @tablePrefix name)
 	  ;; prepend an id-fields
 	  fields  (concat (list ["id" "Long" "protected"]) fields)]
       (gen-java package javaName fields)
       (gen-clj package name fields javaName)
-      (gen-hib package name fields javaName)
+      (gen-hib package tblName fields javaName)
     )))
 
