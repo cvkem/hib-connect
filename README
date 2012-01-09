@@ -28,14 +28,19 @@ When closing the program you need to call 'close-hib' to release the database-co
 In the file vinzi.hib-connector.demo.clj you find some examples of using the system.
 
 ## dependencies
-There is no maven-repository for mysql, so you have to download the jar and install it in your local maven-repository via the command (example):
+There is no maven-repository for mysql, so you have to download the jar and install it in your local maven-repository via the command (example, so include your own paths and version-numbers):
    mvn install:install-file -DgroupId=mysql-connector-java -DartifactId=mysql-connector-java -Dversion=5.1.17 -Dpackaging=jar -Dfile=/opt/jdbc/mysql-connector-java-5.1.17-bin.jar
 This artifact can be used in project.clj as:
   :dependencies [ [mysql-connector-java "5.1.17"]]
 
 ## todo's
 - Add type-meta data to returned clj-objects (such that assoc is allowed again)
--
+- Add type-checking code to the create-object function and the translator.
+- split interface in generate-package and generate object (or prepare a data structure that contains this information)
+- generate the hibernateMapping.xml files
+- generate the hibernate.cfg.xml files based on data-structure (including config parameters)
+- generate directories/folder that do not exist (yet)
+
 
 ## License
 
