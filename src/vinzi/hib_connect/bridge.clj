@@ -15,9 +15,45 @@
     (catch Throwable except
       (println "Exception: " (.getMessage except)))))
 
+
+(comment
+(defn createSessionFactory "Create a sessionFactory" []
+  (try
+;;    (.. (Configuration.) (configure) (buildSessionFactory))
+;;    (.. (Configuration.) (configure "hibernate.cfg.xml") (buildSessionFactory))
+;;    (.. (Configuration.)  (buildSessionFactory))
+(comment
+    (.. (Configuration.)
+;;    <!-- SQL dialect -->
+(setProperty "dialect" 	"org.hibernate.dialect.HSQLDialect")
+;;
+(setProperty "connection.driver_class" 	"org.hsqldb.jdbcDriver")
+(setProperty "connection.url" 	"jdbc:hsqldb:hsql://localhost/testdb")
+(setProperty "connection.username" 	"sa")
+(setProperty "connection.password" 	"")
+;;    <!-- JDBC connection pool (use the built-in) -->
+(setProperty "connection.pool_size" 	"1")
+;;    <!-- Enable Hibernate's automatic session context management -->
+(setProperty "current_session_context_class" 	"thread")
+;;    <!-- Disable the second-level cache -->
+(setProperty "cache.provider_class" 	"org.hibernate.cache.NoCacheProvider")
+;;    <!-- Echo all executed SQL to stdout -->
+(setProperty "show_sql" 	"true")
+ ;;   <!-- Drop and re-create the database schema on startup -->
+(setProperty "hbm1ddl.auto" 	"update")
+;;
+	(buildSessionFactory))
+)  ;;; end comment
+    (.. (Configuration.)
+	(addResource "mapping/hibernateMapping.xml")
+	 (buildSessionFactory))
+    (catch Throwable except
+      (println "Exception: " (.getMessage except)))))
+)
+
 ;; a global variable is used to store the sessionFactory.
 ;; This sessionFActory is used by the call-with-hibernate-session.
-(defonce sessionFactory (createSessionFactory))
+(def sessionFactory (createSessionFactory))
 
 
 (defn close-hib "close the session-factory (shutdown)" []
@@ -26,12 +62,18 @@
 (defn force-open-hib
   "Check the status of the current session. If it is closed reopen it."
   []
-  (when (.isClosed sessionFactory)
+  ;;(println "Force-open-hib:")
+  ;;(println "Currently having sessionFactory" sessionFactory)
+  ;;(when sessionFactory
+    ;;(println "  status " (.isClosed sessionFactory)))
+  (when (or (nil? sessionFactory)
+	    (.isClosed sessionFactory))
     (def sessionFactory (createSessionFactory))))
 
 
 (defn exec-hib-transaction [f & args]
   "Calls function 'f' within a hiberate session. A transaction is opened, next the function 'f' is called with arguments 'session' as first argument, followed by 'args' and afterwords the transaction is commited."
+  (force-open-hib)
   (let [session (.getCurrentSession sessionFactory)]
     (.beginTransaction session)
     (let [res (apply f session args)]
