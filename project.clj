@@ -1,6 +1,8 @@
 (defproject hib-connect "0.8.0"
-  :description "FIXME: write description"
-  :dependencies [[org.clojure/clojure "1.2.1"]
+  :description "Small clojure interface to the hibernate ORM."
+  :dependencies [
+;;[org.clojure/clojure "1.3.0"]
+[org.clojure/clojure "1.2.1"]
 		 [org.clojure/java.jdbc "0.1.1"]
 		 [debugtools "1.0.0"]
                  [org.hsqldb/hsqldb "2.2.4"]
