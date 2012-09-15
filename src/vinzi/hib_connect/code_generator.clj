@@ -68,6 +68,14 @@ public class %s {")
 	toString (apply str (interpose " + " toString))]
     (format toStringFmt toString)))
 
+
+;; TODO:  The java-code currently is written to src/java/output.java
+;;   When ran within a maven project output should go to
+;;         src/main/java/vinzi/java/X/Y/output.java !!
+;;      where X/Y corresponds to the correct package
+;;  TODO: The output should also contain a message stating this is generated code
+;;  and a referral to the code generator 
+
 (defn gen-java [package name fields]
   (let [head    (format headerFmt package name)
 	fldStr  (map java-field-def fields)
