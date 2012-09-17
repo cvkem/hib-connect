@@ -2,10 +2,39 @@
   (require [clojure.string :as str])
   (import  [java.io File]))
 
+;; This code-generator produces a set of compatible .clj and .java files.
+;; The java-files are to initialize the hibernate database, while the
+;; matching clj files are used for the clojure interface to hibernate
+
+
 (def tablePrefix (atom ""))
 
 (defn set-table-prefix [prefix]
   (swap! tablePrefix (fn [_] prefix)))
+
+;; when maven-structure is set to true the default maven folder structure
+;; is assumed to emit files.
+(def maven-structure (atom nil))
+
+(defn check-maven-structure
+  "detect the existence of a main folder"
+  []
+  (when-let [main (File. "src/main")]
+    (let [clojure (File. "src/main/clojure")
+	  java    (File. "src/main/java")]
+      (if (and (.exists main) (.isDirectory main)
+		 (.exists clojure) (.isDirectory clojure)
+		 (.exists java) (.isDirectory java))
+	(do
+	  (println "Maven folder structure detected. "
+		   "Output will be structured accordingly")
+	  (swap! maven-structure (fn [_] true)))
+	(do
+	  (println "No maven (default) folder structure detected."
+		 "\n\t Output to lein folder-structure"
+		 "\n\t Java-files output to \"src/java\" !!")
+	  (swap! maven-structure (fn [_] false)))))))
+
 
 (defn write-src-file
   "Write a file with the provided contents."
@@ -82,7 +111,12 @@ public class %s {")
 	fldStr  (apply str fldStr)
 	cstrStr (java-constructor-def name fields)
 	toStr   (java-toString fields)
-	fileName `("src" "java" ~(str name ".java"))
+	fileName (if @maven-structure
+		   (concat
+		    `("src" "main" "java")
+		      (str/split package #"\.")
+		      (list (str name ".java")))
+		   `("src" "java" ~(str name ".java")))
 	fileName (apply str (interpose File/separator fileName))]
     (write-src-file fileName (str head fldStr cstrStr toStr footFmt))))
 
@@ -166,9 +200,12 @@ public class %s {")
 	createStr  (clj-create name fNames cljName)
 	cloneStr  (clj-clone name fNames)
 	defToCljStr  (java-to-clj name fNames cljName)
-	fileName (concat (list "src")
-			 (str/split package #"\.")
-			 (list "clj" (str name ".clj")))
+	fileName (concat 
+		  (if @maven-structure
+		    (list "src" "main" "clojure")
+		    (list "src"))
+		  (str/split package #"\.")
+		  (list "clj" (str name ".clj")))
 	fileName (apply str (interpose File/separator fileName))
 	]
     (write-src-file fileName (str head
@@ -207,7 +244,9 @@ public class %s {")
 	  fields (skip-id fields ffirst)
 	  fldStr (map hib-descr fields)
 	  fldStr (apply str fldStr)
-	  fileName `("resources"  ~(str tbl_name ".xml.include"))
+	  fileName (if @maven-structure
+		     `("src" "main" "resources"  ~(str tbl_name ".xml.include"))
+		     `("resources"  ~(str tbl_name ".xml.include")))
 	  fileName (apply str (interpose File/separator fileName))]
       (write-src-file fileName (str head fldStr hibFootFmt)))))
 
@@ -222,6 +261,10 @@ public class %s {")
   [qualifiedName fields]
   ;; translate all keywords to strings first.
   (println "received fields: " fields)
+
+  (when (nil? @maven-structure)
+    (check-maven-structure))
+  
   (let [qualifiedName (name qualifiedName)
 	fields (map #(map name  %) fields)]
 ;;	fields (map #(vector (name (first %)) (name (second %))) fields)]
